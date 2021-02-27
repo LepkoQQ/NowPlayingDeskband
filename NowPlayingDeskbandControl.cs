@@ -72,6 +72,7 @@ namespace NowPlayingDeskband
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 7F),
                 TextAlign = ContentAlignment.MiddleLeft,
+                UseMnemonic = false,
                 Text = "",
             };
             Controls.Add(artistLabel);
@@ -84,6 +85,7 @@ namespace NowPlayingDeskband
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 7F),
                 TextAlign = ContentAlignment.MiddleLeft,
+                UseMnemonic = false,
                 Text = "",
             };
             Controls.Add(titleLabel);
@@ -100,18 +102,28 @@ namespace NowPlayingDeskband
 
             if (sorted.Count > 0)
             {
-                var first = sorted[0];
-                artistLabel.Text = first.props.Artist;
-                titleLabel.Text = first.props.Title;
-
-                using (var randomAccessStream = await first.props.Thumbnail.OpenReadAsync())
+                try
                 {
-                    using (var stream = randomAccessStream.AsStream())
+                    var first = sorted[0];
+                    artistLabel.Text = first.props.Artist;
+                    titleLabel.Text = first.props.Title;
+
+                    using (var randomAccessStream = await first.props.Thumbnail.OpenReadAsync())
                     {
-                        var oldImage = albumArtPictureBox.Image;
-                        albumArtPictureBox.Image = CropSpotifyImage(Image.FromStream(stream));
-                        oldImage?.Dispose();
+                        using (var stream = randomAccessStream.AsStream())
+                        {
+                            var oldImage = albumArtPictureBox.Image;
+                            albumArtPictureBox.Image = CropSpotifyImage(Image.FromStream(stream));
+                            oldImage?.Dispose();
+                        }
                     }
+                }
+                catch (Exception)
+                {
+                    artistLabel.Text = "Exception";
+                    titleLabel.Text = ":(";
+                    albumArtPictureBox.Image?.Dispose();
+                    albumArtPictureBox.Image = null;
                 }
             }
             else
