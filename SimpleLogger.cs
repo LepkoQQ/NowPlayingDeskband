@@ -19,7 +19,7 @@ namespace NowPlayingDeskband
             var fullLine = "[" + timeStamp + "] " + line;
 
             System.Diagnostics.Debug.WriteLine(fullLine);
-            File.AppendAllText(filePath, fullLine + "\n");
+            //File.AppendAllText(filePath, fullLine + "\n");
         }
 
         public static void DefaultLog(string line) {
