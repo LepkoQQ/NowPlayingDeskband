@@ -12,7 +12,7 @@ namespace NowPlayingDeskband
 {
     using MediaProperties = GlobalSystemMediaTransportControlsSessionMediaProperties;
     using PlaybackInfo = GlobalSystemMediaTransportControlsSessionPlaybackInfo;
-
+    
     struct MediaSessionWithData
     {
         public MediaManager.MediaSession session;
@@ -42,12 +42,15 @@ namespace NowPlayingDeskband
 
         public NowPlayingDeskbandControl()
         {
+            SimpleLogger.DefaultLog("Creating NowPlayingDeskbandControl...");
             InitializeComponent();
             GetMediaInfo();
+            SimpleLogger.DefaultLog("Creating NowPlayingDeskbandControl DONE");
         }
 
         private void InitializeComponent()
         {
+            SimpleLogger.DefaultLog("Initializing components...");
             SuspendLayout();
 
             Name = "Now Playing Deskband";
@@ -91,17 +94,98 @@ namespace NowPlayingDeskband
             Controls.Add(titleLabel);
 
             ResumeLayout(false);
+            SimpleLogger.DefaultLog("Initializing components DONE");
+        }
+
+        private async void GetMediaInfo() {
+            SimpleLogger.DefaultLog("MediaManager - Adding Listeners...");
+            MediaManager.OnSongChanged += OnSongChanged;
+            MediaManager.OnPlaybackStateChanged += OnPlaybackStateChanged;
+            MediaManager.OnRemovedSource += OnRemovedSource;
+            SimpleLogger.DefaultLog("MediaManager - Adding Listeners DONE");
+
+            while (!IsHandleCreated) {
+                SimpleLogger.DefaultLog("No handle yet, waiting...");
+                await Task.Delay(250);
+            }
+
+            SimpleLogger.DefaultLog("MediaManager - Starting...");
+            MediaManager.Start();
+            SimpleLogger.DefaultLog("MediaManager - Starting DONE");
+        }
+
+        private void OnSongChanged(MediaManager.MediaSession session, MediaProperties props) {
+            SimpleLogger.DefaultLog("OnSongChanged called...");
+            if (IsDisposed) {
+                return;
+            }
+
+            SimpleLogger.DefaultLog("OnSongChanged session:");
+            SimpleLogger.DefaultLog("    SourceAppUserModelId: " + session.ControlSession.SourceAppUserModelId);
+
+            SimpleLogger.DefaultLog("OnSongChanged props:");
+            SimpleLogger.DefaultLog("    Artist: " + props.Artist);
+            SimpleLogger.DefaultLog("    Title: " + props.Title);
+            SimpleLogger.DefaultLog("    AlbumTitle: " + props.AlbumTitle);
+
+            var info = session.ControlSession.GetPlaybackInfo();
+            SimpleLogger.DefaultLog("OnSongChanged info:");
+            SimpleLogger.DefaultLog("    PlaybackStatus: " + info.PlaybackStatus);
+
+            Invoke((MethodInvoker)delegate {
+                sessionData[session] = (session, props, info, DateTime.Now);
+                UpdateSongDisplay();
+            });
+        }
+
+        private void OnPlaybackStateChanged(MediaManager.MediaSession session, PlaybackInfo info) {
+            SimpleLogger.DefaultLog("OnPlaybackStateChanged called...");
+            if (IsDisposed) {
+                return;
+            }
+
+            SimpleLogger.DefaultLog("OnPlaybackStateChanged session:");
+            SimpleLogger.DefaultLog("    SourceAppUserModelId: " + session.ControlSession.SourceAppUserModelId);
+
+            SimpleLogger.DefaultLog("OnPlaybackStateChanged info:");
+            SimpleLogger.DefaultLog("    PlaybackStatus: " + info.PlaybackStatus);
+
+            Invoke((MethodInvoker)delegate {
+                if (sessionData.ContainsKey(session)) {
+                    var props = sessionData[session].props;
+                    sessionData[session] = (session, props, info, DateTime.Now);
+                    UpdateSongDisplay();
+                }
+            });
+        }
+
+        private void OnRemovedSource(MediaManager.MediaSession session) {
+            SimpleLogger.DefaultLog("OnRemovedSource called...");
+            if (IsDisposed) {
+                return;
+            }
+
+            SimpleLogger.DefaultLog("OnRemovedSource session:");
+            SimpleLogger.DefaultLog("    SourceAppUserModelId: " + session.ControlSession.SourceAppUserModelId);
+
+            Invoke((MethodInvoker)delegate {
+                if (sessionData.ContainsKey(session)) {
+                    sessionData.Remove(session);
+                    UpdateSongDisplay();
+                }
+            });
         }
 
         private async void UpdateSongDisplay()
         {
-            //System.Diagnostics.Debug.WriteLine(ms.ControlSession.SourceAppUserModelId);
-
+            SimpleLogger.DefaultLog("UpdateSongDisplay called...");
             var playing = sessionData.Values.Where(value => value.info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
             var sorted = playing.OrderByDescending(value => value.updatedAt).ToList();
+            SimpleLogger.DefaultLog("UpdateSongDisplay - Have " + sorted.Count + " sorted sessions");
 
             if (sorted.Count > 0)
             {
+                SimpleLogger.DefaultLog("UpdateSongDisplay - Trying to display...");
                 try
                 {
                     var first = sorted[0];
@@ -113,101 +197,32 @@ namespace NowPlayingDeskband
                         using (var stream = randomAccessStream.AsStream())
                         {
                             var oldImage = albumArtPictureBox.Image;
-                            albumArtPictureBox.Image = CropSpotifyImage(Image.FromStream(stream));
+                            albumArtPictureBox.Image = Image.FromStream(stream);
                             oldImage?.Dispose();
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    SimpleLogger.DefaultLog("UpdateSongDisplay - Exception: " + e.Message + "\n" + e.StackTrace);
                     artistLabel.Text = "Exception";
                     titleLabel.Text = ":(";
                     albumArtPictureBox.Image?.Dispose();
                     albumArtPictureBox.Image = null;
+                    SimpleLogger.DefaultLog("UpdateSongDisplay - Exception DONE");
                 }
+                SimpleLogger.DefaultLog("UpdateSongDisplay - Trying to display DONE");
             }
             else
             {
+                SimpleLogger.DefaultLog("UpdateSongDisplay - No sessions, resetting display...");
                 artistLabel.Text = "";
                 titleLabel.Text = "";
                 albumArtPictureBox.Image?.Dispose();
                 albumArtPictureBox.Image = null;
+                SimpleLogger.DefaultLog("UpdateSongDisplay - No sessions, resetting display DONE");
             }
-        }
-
-        private Image CropSpotifyImage(Image image)
-        {
-            if (image.Width != 300 || image.Height != 300)
-            {
-                return image;
-            }
-
-            using (var bitmap = new Bitmap(image))
-            {
-                if (bitmap.GetPixel(0, 0).A != 0 || bitmap.GetPixel(32, 0).A != 0 || bitmap.GetPixel(299 - 32, 0).A != 0 || bitmap.GetPixel(299, 0).A != 0)
-                {
-                    return image;
-                }
-
-                var croppedBitmap = bitmap.Clone(new Rectangle(32, 0, 300 - 64, 300 - 64), bitmap.PixelFormat);
-                image.Dispose();
-                return croppedBitmap;
-            }
-        }
-
-        private async void GetMediaInfo()
-        {
-            MediaManager.OnSongChanged += OnSongChanged;
-            MediaManager.OnPlaybackStateChanged += OnPlaybackStateChanged;
-            MediaManager.OnRemovedSource += OnRemovedSource;
-
-            while (!IsHandleCreated)
-            {
-                await Task.Delay(250);
-            }
-
-            MediaManager.Start();
-        }
-
-        private void OnSongChanged(MediaManager.MediaSession session, MediaProperties props)
-        {
-            if (IsDisposed) return;
-
-            var info = session.ControlSession.GetPlaybackInfo();
-            Invoke((MethodInvoker)delegate
-            {
-                sessionData[session] = (session, props, info, DateTime.Now);
-                UpdateSongDisplay();
-            });
-        }
-
-        private void OnPlaybackStateChanged(MediaManager.MediaSession session, PlaybackInfo info)
-        {
-            if (IsDisposed) return;
-
-            Invoke((MethodInvoker)delegate
-            {
-                if (sessionData.ContainsKey(session))
-                {
-                    var props = sessionData[session].props;
-                    sessionData[session] = (session, props, info, DateTime.Now);
-                    UpdateSongDisplay();
-                }
-            });
-        }
-
-        private void OnRemovedSource(MediaManager.MediaSession session)
-        {
-            if (IsDisposed) return;
-
-            Invoke((MethodInvoker)delegate
-            {
-                if (sessionData.ContainsKey(session))
-                {
-                    sessionData.Remove(session);
-                    UpdateSongDisplay();
-                }
-            });
+            SimpleLogger.DefaultLog("UpdateSongDisplay DONE");
         }
     }
 }

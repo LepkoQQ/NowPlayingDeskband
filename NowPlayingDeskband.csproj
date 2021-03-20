@@ -49,6 +49,7 @@
     <Compile Include="CSDeskBand.cs" />
     <Compile Include="Deskband.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SimpleLogger.cs" />
     <Compile Include="WindowsMediaController.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
