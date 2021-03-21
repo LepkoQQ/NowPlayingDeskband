@@ -26,6 +26,21 @@ namespace NowPlayingDeskband
             //         }
             //     }
             // }
+
+            public override bool Equals(object obj) {
+                if (obj is PlaybackData other) {
+                    return IsPlaying == other.IsPlaying && Artist == other.Artist && Title == other.Title;
+                }
+                return false;
+            }
+
+            public override int GetHashCode() {
+                int hash = 17;
+                hash = hash * 23 + IsPlaying.GetHashCode();
+                hash = hash * 23 + Artist.GetHashCode();
+                hash = hash * 23 + Title.GetHashCode();
+                return hash;
+            }
         }
 
         public class CurrentSongChangedEventArgs : EventArgs
@@ -38,7 +53,9 @@ namespace NowPlayingDeskband
         private GlobalSystemMediaTransportControlsSessionManager SystemSessionManager = null;
 
         private readonly Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData> CurrentSessions = new Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData>();
-        
+
+        private PlaybackData? LastPlaybackData;
+
         private bool DisableUpdates = false;
 
         private MediaSessionManager() {
@@ -133,15 +150,28 @@ namespace NowPlayingDeskband
                 SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
             }
 
-            var args = new CurrentSongChangedEventArgs();
-            if (CurrentSessions.Count > 0) {
-                args.PlaybackData = CurrentSessions.Values.Last();
+            if (CurrentSessions.Count == 0) {
+                if (!LastPlaybackData.HasValue) {
+                    SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE (both null)");
+                } else {
+                    LastPlaybackData = null;
+                    CurrentSongChanged?.Invoke(this, new CurrentSongChangedEventArgs());
+                    SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE (old is not null, new is null)");
+                }
+                return;
             }
+
             // TODO: Be more intelligent with the selection
             // var playing = sessionData.Values.Where(value => value.info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
             // var sorted = playing.OrderByDescending(value => value.updatedAt).ToList();
-            CurrentSongChanged?.Invoke(this, args);
+            var playbackData = CurrentSessions.Values.Last();
+            if (LastPlaybackData.Equals(playbackData)) {
+                SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE (old and new are equal)");
+                return;
+            }
 
+            LastPlaybackData = playbackData;
+            CurrentSongChanged?.Invoke(this, new CurrentSongChangedEventArgs { PlaybackData = playbackData });
             SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE");
         }
     }
