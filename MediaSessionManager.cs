@@ -14,6 +14,18 @@ namespace NowPlayingDeskband
             public string Artist;
             public string Title;
             // TODO: thumbnail data
+            // try
+            // {
+            //     using (var randomAccessStream = await first.props.Thumbnail.OpenReadAsync())
+            //     {
+            //         using (var stream = randomAccessStream.AsStream())
+            //         {
+            //             var oldImage = albumArtPictureBox.Image;
+            //             albumArtPictureBox.Image = Image.FromStream(stream);
+            //             oldImage?.Dispose();
+            //         }
+            //     }
+            // }
         }
 
         public class CurrentSongChangedEventArgs : EventArgs
@@ -37,10 +49,13 @@ namespace NowPlayingDeskband
             var instance = new MediaSessionManager {
                 SystemSessionManager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync(),
             };
-            instance.OnSessionsChanged(instance.SystemSessionManager);
             instance.SystemSessionManager.SessionsChanged += instance.OnSessionsChanged;
             SimpleLogger.DefaultLog("MediaSessionManager::CreateAsync DONE");
             return instance;
+        }
+
+        public void ForceUpdate() {
+            OnSessionsChanged(SystemSessionManager);
         }
 
         private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args = null) {
@@ -120,8 +135,11 @@ namespace NowPlayingDeskband
 
             var args = new CurrentSongChangedEventArgs();
             if (CurrentSessions.Count > 0) {
-                args.PlaybackData = CurrentSessions.Values.Last(); // TODO: Be more intelligent with the selection
+                args.PlaybackData = CurrentSessions.Values.Last();
             }
+            // TODO: Be more intelligent with the selection
+            // var playing = sessionData.Values.Where(value => value.info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
+            // var sorted = playing.OrderByDescending(value => value.updatedAt).ToList();
             CurrentSongChanged?.Invoke(this, args);
 
             SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE");

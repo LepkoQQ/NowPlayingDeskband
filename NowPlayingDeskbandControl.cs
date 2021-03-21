@@ -93,64 +93,41 @@ namespace NowPlayingDeskband
 
             SessionManager = await MediaSessionManager.CreateAsync();
             SessionManager.CurrentSongChanged += OnCurrentSongChanged;
+            SessionManager.ForceUpdate();
 
             SimpleLogger.DefaultLog("NowPlayingDeskbandControl::InitializeMediaSessionManager DONE");
         }
 
         private void OnCurrentSongChanged(object sender, MediaSessionManager.CurrentSongChangedEventArgs args) {
+            if (IsDisposed) {
+                return;
+            }
+            
+            SimpleLogger.DefaultLog("NowPlayingDeskbandControl::OnCurrentSongChanged called...");
 
+            Invoke((MethodInvoker)delegate {
+                if (!args.PlaybackData.HasValue) {
+                    SimpleLogger.DefaultLog("    PlaybackData is null, resetting display...");
+                    artistLabel.Text = "";
+                    titleLabel.Text = "";
+                    // TODO: album art
+                    // albumArtPictureBox.Image?.Dispose();
+                    // albumArtPictureBox.Image = null;
+                    SimpleLogger.DefaultLog("    PlaybackData is null, resetting display DONE");
+                    return;
+                }
+
+                SimpleLogger.DefaultLog("    PlaybackData received, setting display...");
+                var data = args.PlaybackData.Value;
+                artistLabel.Text = data.Artist;
+                titleLabel.Text = data.Title;
+                // TODO: album art
+                // albumArtPictureBox.Image?.Dispose();
+                // albumArtPictureBox.Image = null;
+                SimpleLogger.DefaultLog("    PlaybackData received, setting display DONE");
+            });
+
+            SimpleLogger.DefaultLog("NowPlayingDeskbandControl::OnCurrentSongChanged DONE");
         }
-
-        //private async void UpdateSongDisplay()
-        //{
-        //    if (IsDisposed) {
-        //        return;
-        //    }
-        //    SimpleLogger.DefaultLog("UpdateSongDisplay called...");
-        //    var playing = sessionData.Values.Where(value => value.info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
-        //    var sorted = playing.OrderByDescending(value => value.updatedAt).ToList();
-        //    SimpleLogger.DefaultLog("UpdateSongDisplay - Have " + sorted.Count + " sorted sessions");
-
-        //    if (sorted.Count > 0)
-        //    {
-        //        SimpleLogger.DefaultLog("UpdateSongDisplay - Trying to display...");
-        //        try
-        //        {
-        //            var first = sorted[0];
-        //            artistLabel.Text = first.props.Artist;
-        //            titleLabel.Text = first.props.Title;
-
-        //            using (var randomAccessStream = await first.props.Thumbnail.OpenReadAsync())
-        //            {
-        //                using (var stream = randomAccessStream.AsStream())
-        //                {
-        //                    var oldImage = albumArtPictureBox.Image;
-        //                    albumArtPictureBox.Image = Image.FromStream(stream);
-        //                    oldImage?.Dispose();
-        //                }
-        //            }
-        //        }
-        //        catch (Exception e)
-        //        {
-        //            SimpleLogger.DefaultLog("UpdateSongDisplay - Exception: " + e.Message + "\n" + e.StackTrace);
-        //            artistLabel.Text = "Exception";
-        //            titleLabel.Text = ":(";
-        //            albumArtPictureBox.Image?.Dispose();
-        //            albumArtPictureBox.Image = null;
-        //            SimpleLogger.DefaultLog("UpdateSongDisplay - Exception DONE");
-        //        }
-        //        SimpleLogger.DefaultLog("UpdateSongDisplay - Trying to display DONE");
-        //    }
-        //    else
-        //    {
-        //        SimpleLogger.DefaultLog("UpdateSongDisplay - No sessions, resetting display...");
-        //        artistLabel.Text = "";
-        //        titleLabel.Text = "";
-        //        albumArtPictureBox.Image?.Dispose();
-        //        albumArtPictureBox.Image = null;
-        //        SimpleLogger.DefaultLog("UpdateSongDisplay - No sessions, resetting display DONE");
-        //    }
-        //    SimpleLogger.DefaultLog("UpdateSongDisplay DONE");
-        //}
     }
 }
