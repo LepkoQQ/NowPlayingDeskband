@@ -15,7 +15,7 @@ namespace NowPlayingDeskband
         private Label artistLabel;
         private Label titleLabel;
 
-        private MediaSessionManager mediaSessionManager = null;
+        private MediaSessionManager SessionManager = null;
 
         public NowPlayingDeskbandControl()
         {
@@ -91,9 +91,14 @@ namespace NowPlayingDeskband
                 await Task.Delay(250);
             }
 
-            mediaSessionManager = await MediaSessionManager.CreateAsync();
+            SessionManager = await MediaSessionManager.CreateAsync();
+            SessionManager.CurrentSongChanged += OnCurrentSongChanged;
 
             SimpleLogger.DefaultLog("NowPlayingDeskbandControl::InitializeMediaSessionManager DONE");
+        }
+
+        private void OnCurrentSongChanged(object sender, MediaSessionManager.CurrentSongChangedEventArgs args) {
+
         }
 
         //private async void UpdateSongDisplay()

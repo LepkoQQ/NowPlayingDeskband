@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.Media.Control;
-using Windows.Foundation;
 
 namespace NowPlayingDeskband
 {
     class MediaSessionManager
     {
-        struct PlaybackData
+        public struct PlaybackData
         {
             public bool IsPlaying;
             public string Artist;
@@ -18,10 +16,18 @@ namespace NowPlayingDeskband
             // TODO: thumbnail data
         }
 
-        private GlobalSystemMediaTransportControlsSessionManager SystemSessionManager = null;
-        private readonly Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData> CurrentSessions = new Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData>();
+        public class CurrentSongChangedEventArgs : EventArgs
+        {
+            public PlaybackData? PlaybackData { get; set; }
+        }
 
-        private bool PauseUpdates = false;
+        public event EventHandler<CurrentSongChangedEventArgs> CurrentSongChanged;
+
+        private GlobalSystemMediaTransportControlsSessionManager SystemSessionManager = null;
+
+        private readonly Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData> CurrentSessions = new Dictionary<GlobalSystemMediaTransportControlsSession, PlaybackData>();
+        
+        private bool DisableUpdates = false;
 
         private MediaSessionManager() {
         }
@@ -38,7 +44,7 @@ namespace NowPlayingDeskband
         }
 
         private void OnSessionsChanged(GlobalSystemMediaTransportControlsSessionManager sender, SessionsChangedEventArgs args = null) {
-            PauseUpdates = true;
+            DisableUpdates = true;
 
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Clearing old sessions...");
             foreach (var oldSession in CurrentSessions.Keys) {
@@ -64,7 +70,7 @@ namespace NowPlayingDeskband
             }
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Adding new sessions DONE");
 
-            PauseUpdates = false;
+            DisableUpdates = false;
             UpdateCurrentSong();
         }
 
@@ -101,15 +107,23 @@ namespace NowPlayingDeskband
         }
 
         private void UpdateCurrentSong() {
-            if (PauseUpdates) {
-                SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong called, but updates are paused.");
+            if (DisableUpdates) {
+                SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong called, but updates are disabled.");
                 return;
             }
 
             SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong called...");
+
             foreach (var data in CurrentSessions.Values) {
-                SimpleLogger.DefaultLog($"    - {data.Artist} - {data.Title} - {data.IsPlaying}");
+                SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
             }
+
+            var args = new CurrentSongChangedEventArgs();
+            if (CurrentSessions.Count > 0) {
+                args.PlaybackData = CurrentSessions.Values.Last(); // TODO: Be more intelligent with the selection
+            }
+            CurrentSongChanged?.Invoke(this, args);
+
             SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE");
         }
     }
