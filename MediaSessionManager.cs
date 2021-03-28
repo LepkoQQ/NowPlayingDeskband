@@ -70,9 +70,10 @@ namespace NowPlayingDeskband
             DisableUpdates = true;
 
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Clearing old sessions...");
-            foreach (var oldSession in CurrentSessions.Keys) {
-                oldSession.MediaPropertiesChanged -= OnMediaPropertiesChanged;
-                oldSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+            foreach (var entry in CurrentSessions) {
+                entry.Key.MediaPropertiesChanged -= OnMediaPropertiesChanged;
+                entry.Key.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+                entry.Value.AlbumArt?.Dispose();
             }
             CurrentSessions.Clear();
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Clearing old sessions DONE");
@@ -150,11 +151,25 @@ namespace NowPlayingDeskband
 
             SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong called...");
 
-            foreach (var data in CurrentSessions.Values) {
+            var sessions = CurrentSessions.Values.ToList();
+            SimpleLogger.DefaultLog("> All sessions:");
+            foreach (var data in sessions) {
                 SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
             }
 
-            if (CurrentSessions.Count == 0) {
+            sessions = sessions.Where(value => value.IsPlaying).ToList();
+            SimpleLogger.DefaultLog("> Playing sessions:");
+            foreach (var data in sessions) {
+                SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
+            }
+
+            sessions = sessions.Where(value => value.Artist != "" || value.Title != "").ToList();
+            SimpleLogger.DefaultLog("> Sessions with info:");
+            foreach (var data in sessions) {
+                SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
+            }
+
+            if (sessions.Count == 0) {
                 if (!LastPlaybackData.HasValue) {
                     SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE (both null)");
                 } else {
@@ -166,9 +181,8 @@ namespace NowPlayingDeskband
             }
 
             // TODO: Be more intelligent with the selection
-            // var playing = sessionData.Values.Where(value => value.info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing).ToList();
             // var sorted = playing.OrderByDescending(value => value.updatedAt).ToList();
-            var playbackData = CurrentSessions.Values.Last();
+            var playbackData = sessions.Last();
             if (LastPlaybackData.Equals(playbackData)) {
                 SimpleLogger.DefaultLog("MediaSessionManager::UpdateCurrentSong DONE (old and new are equal)");
                 return;

@@ -105,7 +105,6 @@ namespace NowPlayingDeskband
                     SimpleLogger.DefaultLog("    PlaybackData is null, resetting display...");
                     artistLabel.Text = "";
                     titleLabel.Text = "";
-                    albumArtPictureBox.Image?.Dispose();
                     albumArtPictureBox.Image = null;
                     SimpleLogger.DefaultLog("    PlaybackData is null, resetting display DONE");
                     return;
@@ -116,7 +115,6 @@ namespace NowPlayingDeskband
                 artistLabel.Text = data.Artist;
                 titleLabel.Text = data.Title;
                 if (albumArtPictureBox.Image != data.AlbumArt) {
-                    albumArtPictureBox.Image?.Dispose();
                     albumArtPictureBox.Image = data.AlbumArt;
                 }
                 SimpleLogger.DefaultLog("    PlaybackData received, setting display DONE");
