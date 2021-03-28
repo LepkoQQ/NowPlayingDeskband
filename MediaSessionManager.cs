@@ -109,7 +109,15 @@ namespace NowPlayingDeskband
                     if (props.Thumbnail != null) {
                         using (var winStream = props.Thumbnail.OpenReadAsync().GetAwaiter().GetResult()) {
                             using (var stream = winStream.AsStream()) {
-                                albumArt = Image.FromStream(stream);
+                                if (session.SourceAppUserModelId.ToLower().Contains("spotify")) {
+                                    using (var image = Image.FromStream(stream)) {
+                                        using (var bitmap = new Bitmap(image)) {
+                                            albumArt = bitmap.Clone(new Rectangle(33, 0, 234, 234), bitmap.PixelFormat);
+                                        }
+                                    }
+                                } else {
+                                    albumArt = Image.FromStream(stream);
+                                }
                             }
                         }
                     }
