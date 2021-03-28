@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+﻿using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Windows.Media.Control;
 
 namespace NowPlayingDeskband
 {
@@ -59,7 +54,7 @@ namespace NowPlayingDeskband
                 Location = new Point(0, 78),
                 Size = new Size(78, 12),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 7F),
+                Font = new Font("Segoe UI", 6.5F),
                 TextAlign = ContentAlignment.MiddleLeft,
                 UseMnemonic = false,
                 Text = "",
@@ -72,7 +67,7 @@ namespace NowPlayingDeskband
                 Location = new Point(0, 78 + 12),
                 Size = new Size(78, 12),
                 ForeColor = Color.White,
-                Font = new Font("Segoe UI", 7F),
+                Font = new Font("Segoe UI", 6.5F),
                 TextAlign = ContentAlignment.MiddleLeft,
                 UseMnemonic = false,
                 Text = "",
@@ -110,9 +105,8 @@ namespace NowPlayingDeskband
                     SimpleLogger.DefaultLog("    PlaybackData is null, resetting display...");
                     artistLabel.Text = "";
                     titleLabel.Text = "";
-                    // TODO: album art
-                    // albumArtPictureBox.Image?.Dispose();
-                    // albumArtPictureBox.Image = null;
+                    albumArtPictureBox.Image?.Dispose();
+                    albumArtPictureBox.Image = null;
                     SimpleLogger.DefaultLog("    PlaybackData is null, resetting display DONE");
                     return;
                 }
@@ -121,9 +115,10 @@ namespace NowPlayingDeskband
                 var data = args.PlaybackData.Value;
                 artistLabel.Text = data.Artist;
                 titleLabel.Text = data.Title;
-                // TODO: album art
-                // albumArtPictureBox.Image?.Dispose();
-                // albumArtPictureBox.Image = null;
+                if (albumArtPictureBox.Image != data.AlbumArt) {
+                    albumArtPictureBox.Image?.Dispose();
+                    albumArtPictureBox.Image = data.AlbumArt;
+                }
                 SimpleLogger.DefaultLog("    PlaybackData received, setting display DONE");
             });
 

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Media.Control;
@@ -13,23 +15,11 @@ namespace NowPlayingDeskband
             public bool IsPlaying;
             public string Artist;
             public string Title;
-            // TODO: thumbnail data
-            // try
-            // {
-            //     using (var randomAccessStream = await first.props.Thumbnail.OpenReadAsync())
-            //     {
-            //         using (var stream = randomAccessStream.AsStream())
-            //         {
-            //             var oldImage = albumArtPictureBox.Image;
-            //             albumArtPictureBox.Image = Image.FromStream(stream);
-            //             oldImage?.Dispose();
-            //         }
-            //     }
-            // }
+            public Image AlbumArt;
 
             public override bool Equals(object obj) {
                 if (obj is PlaybackData other) {
-                    return IsPlaying == other.IsPlaying && Artist == other.Artist && Title == other.Title;
+                    return IsPlaying == other.IsPlaying && Artist == other.Artist && Title == other.Title && AlbumArt == other.AlbumArt;
                 }
                 return false;
             }
@@ -39,6 +29,7 @@ namespace NowPlayingDeskband
                 hash = hash * 23 + IsPlaying.GetHashCode();
                 hash = hash * 23 + Artist.GetHashCode();
                 hash = hash * 23 + Title.GetHashCode();
+                hash = hash * 23 + AlbumArt.GetHashCode();
                 return hash;
             }
         }
@@ -107,15 +98,26 @@ namespace NowPlayingDeskband
         }
 
         private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession session, MediaPropertiesChangedEventArgs args = null) {
+            SimpleLogger.DefaultLog("MediaSessionManager::OnMediaPropertiesChanged called...");
             try {
                 if (CurrentSessions.ContainsKey(session)) {
                     var props = session.TryGetMediaPropertiesAsync().GetAwaiter().GetResult();
-                    var data = CurrentSessions[session];
                     var title = props.Title;
                     var artist = props.Artist;
-                    if (data.Title != title || data.Artist != artist) {
+                    Image albumArt = null;
+                    if (props.Thumbnail != null) {
+                        using (var winStream = props.Thumbnail.OpenReadAsync().GetAwaiter().GetResult()) {
+                            using (var stream = winStream.AsStream()) {
+                                albumArt = Image.FromStream(stream);
+                            }
+                        }
+                    }
+
+                    var data = CurrentSessions[session];
+                    if (data.Title != title || data.Artist != artist || data.AlbumArt != albumArt) {
                         data.Title = title;
                         data.Artist = artist;
+                        data.AlbumArt = albumArt;
                         CurrentSessions[session] = data;
                         UpdateCurrentSong();
                     }
@@ -123,13 +125,15 @@ namespace NowPlayingDeskband
             } catch (Exception e) {
                 SimpleLogger.DefaultLog($"MediaSessionManager::OnMediaPropertiesChanged - Exception - {e.Message}\n{e.StackTrace}");
             }
+            SimpleLogger.DefaultLog("MediaSessionManager::OnMediaPropertiesChanged DONE");
         }
 
         private void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession session, PlaybackInfoChangedEventArgs args = null) {
             if (CurrentSessions.ContainsKey(session)) {
                 var info = session.GetPlaybackInfo();
-                var data = CurrentSessions[session];
                 var isPlaying = info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+
+                var data = CurrentSessions[session];
                 if (data.IsPlaying != isPlaying) {
                     data.IsPlaying = isPlaying;
                     CurrentSessions[session] = data;
