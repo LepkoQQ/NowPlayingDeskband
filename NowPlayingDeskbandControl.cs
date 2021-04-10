@@ -1,4 +1,6 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
+using System.Drawing.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -6,6 +8,7 @@ namespace NowPlayingDeskband
 {
     class NowPlayingDeskbandControl : UserControl
     {
+        private ContextMenuStrip contextMenuStrip;
         private PictureBox albumArtPictureBox;
         private Label artistLabel;
         private Label titleLabel;
@@ -38,8 +41,15 @@ namespace NowPlayingDeskband
             Size = new Size(78, 78 + 12 + 12);
             BackColor = Color.Black;
 
-            albumArtPictureBox = new PictureBox
-            {
+            contextMenuStrip = new ContextMenuStrip();
+            var settingsItem = new ToolStripMenuItem {
+                Text = "Settings",
+            };
+            settingsItem.Click += OnOpenSettingsWindow;
+            contextMenuStrip.Items.Add(settingsItem);
+            ContextMenuStrip = contextMenuStrip;
+
+            albumArtPictureBox = new PictureBox {
                 Name = "Album Art Picture",
                 Location = new Point(2, 2),
                 Size = new Size(74, 74),
@@ -51,7 +61,7 @@ namespace NowPlayingDeskband
             artistLabel = new Label
             {
                 Name = "Artist Label",
-                Location = new Point(0, 78),
+                Location = new Point(1, 77),
                 Size = new Size(78, 12),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 6.5F),
@@ -64,7 +74,7 @@ namespace NowPlayingDeskband
             titleLabel = new Label
             {
                 Name = "Title Label",
-                Location = new Point(0, 78 + 12),
+                Location = new Point(1, 77 + 12),
                 Size = new Size(78, 12),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 6.5F),
@@ -76,6 +86,16 @@ namespace NowPlayingDeskband
 
             ResumeLayout(false);
             SimpleLogger.DefaultLog("NowPlayingDeskbandControl::InitializeComponent DONE");
+        }
+
+        private void OnOpenSettingsWindow(object sender, EventArgs e) {
+            var form = new SettingsForm();
+            form.SettingsChanged += OnSettingsChanged;
+            form.Show(); 
+        }
+
+        private void OnSettingsChanged(object sender, EventArgs e) {
+            SimpleLogger.DefaultLog("OnSettingsChanged");
         }
 
         private async Task InitializeMediaSessionManager() {
@@ -115,6 +135,14 @@ namespace NowPlayingDeskband
                 artistLabel.Text = data.Artist;
                 titleLabel.Text = data.Title;
                 if (albumArtPictureBox.Image != data.AlbumArt) {
+                    if (data.AlbumArt.Width > data.AlbumArt.Height) {
+                        var ratio = data.AlbumArt.Height / (double)data.AlbumArt.Width;
+                        albumArtPictureBox.Height = (int)Math.Ceiling(albumArtPictureBox.Width * ratio);
+                        albumArtPictureBox.Top = 2 + albumArtPictureBox.Width - albumArtPictureBox.Height;
+                    } else {
+                        albumArtPictureBox.Height = albumArtPictureBox.Width;
+                        albumArtPictureBox.Top = 2;
+                    }
                     albumArtPictureBox.Image = data.AlbumArt;
                 }
                 SimpleLogger.DefaultLog("    PlaybackData received, setting display DONE");
