@@ -171,7 +171,10 @@ namespace NowPlayingDeskband
                 SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
             }
 
-            sessions = sessions.Where(value => value.Artist != "" || value.Title != "").ToList();
+            // sessions = sessions.Where(value => value.Artist != "" || value.Title != "").ToList();
+            // TODO: Implement settings for this.
+            // For now since I'm using this mainly for music info, don't show if artist or album art are not set
+            sessions = sessions.Where(value => value.Artist != "" && value.AlbumArt != null).ToList();
             SimpleLogger.DefaultLog("> Sessions with info:");
             foreach (var data in sessions) {
                 SimpleLogger.DefaultLog($"    > Artist={data.Artist}; Title={data.Title}; IsPlaying={data.IsPlaying}");
