@@ -73,7 +73,7 @@ namespace NowPlayingDeskband
             foreach (var entry in CurrentSessions) {
                 entry.Key.MediaPropertiesChanged -= OnMediaPropertiesChanged;
                 entry.Key.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-                entry.Value.AlbumArt?.Dispose();
+                //entry.Value.AlbumArt?.Dispose();
             }
             CurrentSessions.Clear();
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Clearing old sessions DONE");
