@@ -49,6 +49,8 @@ namespace NowPlayingDeskband
 
         private bool DisableUpdates = false;
 
+        private bool IsDestroyed = false;
+
         private MediaSessionManager() {
         }
 
@@ -62,7 +64,30 @@ namespace NowPlayingDeskband
             return instance;
         }
 
+        public void Destroy() {
+            if (IsDestroyed) {
+                return;
+            }
+
+            IsDestroyed = true;
+
+            SystemSessionManager.SessionsChanged -= OnSessionsChanged;
+            SystemSessionManager = null;
+
+            foreach (var entry in CurrentSessions) {
+                entry.Key.MediaPropertiesChanged -= OnMediaPropertiesChanged;
+                entry.Key.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+            }
+            CurrentSessions.Clear();
+
+            LastPlaybackData = null;
+        }
+
         public void ForceUpdate() {
+            if (IsDestroyed) {
+                return;
+            }
+
             OnSessionsChanged(SystemSessionManager);
         }
 
@@ -73,7 +98,6 @@ namespace NowPlayingDeskband
             foreach (var entry in CurrentSessions) {
                 entry.Key.MediaPropertiesChanged -= OnMediaPropertiesChanged;
                 entry.Key.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-                //entry.Value.AlbumArt?.Dispose();
             }
             CurrentSessions.Clear();
             SimpleLogger.DefaultLog("MediaSessionManager::OnSessionsChanged - Clearing old sessions DONE");

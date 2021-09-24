@@ -17,6 +17,10 @@ namespace NowPlayingDeskband
 
         public NowPlayingDeskbandControl()
         {
+            InitializeAll();
+        }
+
+        private void InitializeAll() {
             // Sync
             SimpleLogger.DefaultLog("NowPlayingDeskbandControl::constructor called...");
             InitializeComponent();
@@ -41,13 +45,29 @@ namespace NowPlayingDeskband
             Size = new Size(78, 78 + 12 + 12);
             BackColor = Color.Black;
 
-            contextMenuStrip = new ContextMenuStrip();
-            var settingsItem = new ToolStripMenuItem {
-                Text = "Settings",
-            };
-            settingsItem.Click += OnOpenSettingsWindow;
-            contextMenuStrip.Items.Add(settingsItem);
-            ContextMenuStrip = contextMenuStrip;
+            if (contextMenuStrip == null) {
+                contextMenuStrip = new ContextMenuStrip();
+
+                var settingsItem = new ToolStripMenuItem {
+                    Text = "Settings",
+                };
+                settingsItem.Click += OnOpenSettingsWindow;
+                contextMenuStrip.Items.Add(settingsItem);
+
+                var forceUpdateSessionsItem = new ToolStripMenuItem {
+                    Text = "Force Update",
+                };
+                forceUpdateSessionsItem.Click += OnForceUpdateSessions;
+                contextMenuStrip.Items.Add(forceUpdateSessionsItem);
+
+                var reinitializeItem = new ToolStripMenuItem {
+                    Text = "Reinitialize Component",
+                };
+                reinitializeItem.Click += OnReinitializeComponent;
+                contextMenuStrip.Items.Add(reinitializeItem);
+
+                ContextMenuStrip = contextMenuStrip;
+            }
 
             albumArtPictureBox = new PictureBox {
                 Name = "Album Art Picture",
@@ -91,7 +111,24 @@ namespace NowPlayingDeskband
         private void OnOpenSettingsWindow(object sender, EventArgs e) {
             var form = new SettingsForm();
             form.SettingsChanged += OnSettingsChanged;
-            form.Show(); 
+            form.Show();
+        }
+
+        private void OnForceUpdateSessions(object sender, EventArgs e) {
+            SessionManager?.ForceUpdate();
+        }
+
+        private void OnReinitializeComponent(object sender, EventArgs e) {
+            Controls.Clear();
+            albumArtPictureBox = null;
+            artistLabel = null;
+            titleLabel = null;
+
+            SessionManager.CurrentSongChanged -= OnCurrentSongChanged;
+            SessionManager.Destroy();
+            SessionManager = null;
+
+            InitializeAll();
         }
 
         private void OnSettingsChanged(object sender, EventArgs e) {
